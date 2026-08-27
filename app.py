@@ -227,10 +227,8 @@ with tab_cripto:
         else:
             st.write(f"Con tu asignación (**${riesgo_cripto:,.2f}**), esta es tu estrategia:")
             c1, c2 = st.columns(2)
-            c1.success(f"**🟢 Entrada Sugerida:**
-`${precio_compra:,.2f} USD`")
-            c2.error(f"**🔴 Salida (Take Profit):**
-`${precio_venta:,.2f} USD`")
+            c1.success(f"**🟢 Entrada Sugerida:**\n`${precio_compra:,.2f} USD`")
+            c2.error(f"**🔴 Salida (Take Profit):**\n`${precio_venta:,.2f} USD`")
     else:
         st.error("No se pudieron cargar los precios de la red en este momento. Intenta de nuevo en un par de minutos.")
 
