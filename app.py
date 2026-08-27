@@ -116,7 +116,7 @@ with tab_presupuesto:
     col1, col2 = st.columns(2)
     with col1:
         gasto_transporte = st.number_input("Transporte / Universidad", value=600.0, step=50.0)
-        gasto_mascotas = st.number_input("Mascotas (Perros, Conejo, Agustín)", value=400.0, step=50.0)
+        gasto_mascotas = st.number_input("Mascotas (Perros, Gatos, Conejos, Pajaros)", value=400.0, step=50.0)
     with col2:
         gasto_comida = st.number_input("Alimentación / Despensa", value=1500.0, step=100.0)
         gasto_otros = st.number_input("Salidas y Gustos", value=500.0, step=50.0)
