@@ -7,7 +7,7 @@ import tempfile
 import os
 
 st.set_page_config(page_title="Gestor Financiero | Brote", page_icon="🌱", layout="centered")
-st.title("🌱 Gestor Financiero Integral")
+st.title("Gestor Financiero Integral Piloto")
 st.caption("Presupuestos, Portafolios Diversificados y Análisis de Mercado")
 
 # --- INTENTO DE IMPORTAR FPDF (Para el PDF) ---
@@ -123,13 +123,13 @@ def generar_pdf(ingreso, gastos, sobrante, p_seg, m_seg, p_mod, m_mod, p_cri, m_
         return tmp.name
 
 # --- INTERFAZ ---
-tab_presupuesto, tab_cripto, tab_datos = st.tabs(["💼 Tu Presupuesto", "🎯 Operación Cripto", "📊 Gráficos"])
+tab_presupuesto, tab_cripto, tab_datos = st.tabs(["Tu Presupuesto", "Operación Cripto", "Gráficos"])
 
 with tab_presupuesto:
     if not pdf_disponible:
         st.warning("⚠️ **Aviso técnico:** Para activar el botón de PDF, agrega la palabra `fpdf` a tu archivo `requirements.txt` en GitHub.")
 
-    st.markdown("### 📝 1. Tu Flujo de Efectivo Mensual")
+    st.markdown("### 1. Tu Flujo de Efectivo Mensual")
     ingreso = st.number_input("Ingresos Totales (Salario, proyectos, etc):", min_value=0.0, value=5000.0, step=500.0)
     
     st.write("**Gastos Innegociables (Base Operativa):**")
@@ -148,7 +148,7 @@ with tab_presupuesto:
     if sobrante > 0:
         st.success(f"**Capital Libre para Invertir:** `${sobrante:,.2f} MXN`")
         
-        st.markdown("### 🏦 2. Distribución de Portafolios (Ingresos Pasivos)")
+        st.markdown("### 2. Distribución de Portafolios (Ingresos Pasivos)")
         st.write("Ajusta los porcentajes según tu estrategia mensual. El sistema usa la regla 50/30/20 por defecto:")
         
         c_pct1, c_pct2, c_pct3 = st.columns(3)
@@ -173,23 +173,23 @@ with tab_presupuesto:
             ruta_pdf = generar_pdf(ingreso, gastos_totales, sobrante, pct_seguridad, fondo_seguridad, pct_moderado, etf_crecimiento, pct_cripto, riesgo_cripto)
             with open(ruta_pdf, "rb") as f:
                 st.download_button(
-                    label="📥 Descargar Reporte PDF del Mes",
+                    label="Descargar Reporte PDF del Mes",
                     data=f,
                     file_name=f"Reporte_Financiero_{datetime.now().strftime('%Y-%m')}.pdf",
                     mime="application/pdf"
                 )
             os.remove(ruta_pdf)
         
-        with st.expander(f"🛡️ Sin Riesgo ({pct_seguridad}%) -> Destina ${fondo_seguridad:,.2f} MXN", expanded=True):
+        with st.expander(f" Sin Riesgo ({pct_seguridad}%) -> Destina ${fondo_seguridad:,.2f} MXN", expanded=True):
             st.markdown("- **Cajitas Nu (SOFIPO):** Alto rendimiento pasivo, liquidez inmediata (24/7). Ideal para fondo de emergencias.")
             st.markdown("- **Mercado Pago / GBM:** Fondo líquido, excelente para dinero de uso rápido.")
             st.markdown("- **Cetesdirecto (BONDDIA):** La opción más segura del país (Respaldada por Hacienda).")
 
-        with st.expander(f"📈 Riesgo Moderado ({pct_moderado}%) -> Destina ${etf_crecimiento:,.2f} MXN", expanded=True):
+        with st.expander(f" Riesgo Moderado ({pct_moderado}%) -> Destina ${etf_crecimiento:,.2f} MXN", expanded=True):
             st.markdown("- **FIBRAs (Ej. Fibra Monterrey / Fibra Uno):** Fideicomisos inmobiliarios.")
             st.markdown("- **ETFs de Dividendos:** Participaciones en empresas seguras.")
 
-        with st.expander(f"⚡ Alto Riesgo ({pct_cripto}%) -> Destina ${riesgo_cripto:,.2f} MXN", expanded=True):
+        with st.expander(f" Alto Riesgo ({pct_cripto}%) -> Destina ${riesgo_cripto:,.2f} MXN", expanded=True):
             st.markdown("- **Staking de Dólares Digitales (USDT) en Binance.**")
             st.markdown("- **Trading Estratégico (BTC):** Compras guiadas por MACD y Hype.")
     else:
