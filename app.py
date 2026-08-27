@@ -48,14 +48,35 @@ def obtener_noticias_y_hype():
         return noticias, score
     except: return [], 0
 
-@st.cache_data(ttl=1800)
-def cargar_datos_completos():
-    fng_val, fng_txt = obtener_sentimiento()
+def obtener_precios_historicos():
+    # PLAN A: Yahoo Finance (Súper estable, no bloquea fácil)
+    try:
+        url = "https://query1.finance.yahoo.com/v8/finance/chart/BTC-USD?range=5y&interval=1d"
+        res = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'}, timeout=5)
+        if res.status_code == 200:
+            data = res.json()
+            fechas = [pd.to_datetime(ts, unit='s') for ts in data['chart']['result'][0]['timestamp']]
+            closes = data['chart']['result'][0]['indicators']['quote'][0]['close']
+            return pd.DataFrame({'fecha': fechas, 'precio': closes}).dropna()
+    except: pass
+    
+    # PLAN B: CoinGecko
     try:
         url = "https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=1825&interval=daily"
         res = requests.get(url, timeout=5)
-        data = res.json()
-        df = pd.DataFrame({"fecha": [pd.to_datetime(p[0], unit='ms') for p in data["prices"]], "precio": [p[1] for p in data["prices"]]}).dropna()
+        if res.status_code == 200:
+            data = res.json()
+            return pd.DataFrame({"fecha": [pd.to_datetime(p[0], unit='ms') for p in data["prices"]], "precio": [p[1] for p in data["prices"]]}).dropna()
+    except: pass
+    
+    return pd.DataFrame() # Si todo falla, devuelve vacío
+
+@st.cache_data(ttl=1800)
+def cargar_datos_completos():
+    fng_val, fng_txt = obtener_sentimiento()
+    df = obtener_precios_historicos()
+    
+    if not df.empty:
         df["SMA_20"] = df["precio"].rolling(20).mean()
         df["SMA_200"] = df["precio"].rolling(200).mean()
         delta = df["precio"].diff()
@@ -64,8 +85,8 @@ def cargar_datos_completos():
         ema26 = df['precio'].ewm(span=26, adjust=False).mean()
         df['MACD'] = ema12 - ema26
         df['Signal_Line'] = df['MACD'].ewm(span=9, adjust=False).mean()
-        return df, fng_val, fng_txt
-    except: return pd.DataFrame(), fng_val, fng_txt
+        
+    return df, fng_val, fng_txt
 
 def generar_pdf(ingreso, gastos, sobrante, p_seg, m_seg, p_mod, m_mod, p_cri, m_cri):
     pdf = FPDF()
@@ -87,7 +108,7 @@ def generar_pdf(ingreso, gastos, sobrante, p_seg, m_seg, p_mod, m_mod, p_cri, m_
     pdf.cell(200, 10, txt=f"Gastos Innegociables: ${gastos:,.2f} MXN", ln=True)
     pdf.cell(200, 10, txt=f"Capital Libre (Sobrante): ${sobrante:,.2f} MXN", ln=True)
     
-    pdf.cell(200, 5, txt="", ln=True) # Espacio
+    pdf.cell(200, 5, txt="", ln=True)
     
     # Portafolios
     pdf.set_font("Arial", 'B', 12)
@@ -97,7 +118,6 @@ def generar_pdf(ingreso, gastos, sobrante, p_seg, m_seg, p_mod, m_mod, p_cri, m_
     pdf.cell(200, 10, txt=f"- Riesgo Moderado/ETFs ({p_mod}%): ${m_mod:,.2f} MXN", ln=True)
     pdf.cell(200, 10, txt=f"- Alto Riesgo/Cripto ({p_cri}%): ${m_cri:,.2f} MXN", ln=True)
     
-    # Guardar en archivo temporal
     with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
         pdf.output(tmp.name)
         return tmp.name
@@ -116,7 +136,7 @@ with tab_presupuesto:
     col1, col2 = st.columns(2)
     with col1:
         gasto_transporte = st.number_input("Transporte / Universidad", value=600.0, step=50.0)
-        gasto_mascotas = st.number_input("Mascotas (Perros, Gatos, Conejos, Pajaros)", value=400.0, step=50.0)
+        gasto_mascotas = st.number_input("Mascotas (Perros, Conejo, Agustín)", value=400.0, step=50.0)
     with col2:
         gasto_comida = st.number_input("Alimentación / Despensa", value=1500.0, step=100.0)
         gasto_otros = st.number_input("Salidas y Gustos", value=500.0, step=50.0)
@@ -158,7 +178,6 @@ with tab_presupuesto:
                     file_name=f"Reporte_Financiero_{datetime.now().strftime('%Y-%m')}.pdf",
                     mime="application/pdf"
                 )
-            # Limpiar temporal
             os.remove(ruta_pdf)
         
         with st.expander(f"🛡️ Sin Riesgo ({pct_seguridad}%) -> Destina ${fondo_seguridad:,.2f} MXN", expanded=True):
@@ -208,10 +227,12 @@ with tab_cripto:
         else:
             st.write(f"Con tu asignación (**${riesgo_cripto:,.2f}**), esta es tu estrategia:")
             c1, c2 = st.columns(2)
-            c1.success(f"**🟢 Entrada Sugerida:**\n`${precio_compra:,.2f} USD`")
-            c2.error(f"**🔴 Salida (Take Profit):**\n`${precio_venta:,.2f} USD`")
+            c1.success(f"**🟢 Entrada Sugerida:**
+`${precio_compra:,.2f} USD`")
+            c2.error(f"**🔴 Salida (Take Profit):**
+`${precio_venta:,.2f} USD`")
     else:
-        st.error("No se pudieron cargar los precios.")
+        st.error("No se pudieron cargar los precios de la red en este momento. Intenta de nuevo en un par de minutos.")
 
 with tab_datos:
     if not df.empty:
@@ -225,3 +246,5 @@ with tab_datos:
         fig.add_trace(go.Scatter(x=df.tail(90)["fecha"], y=df.tail(90)["SMA_20"], name="SMA 20", line=dict(color="#2962ff", dash="dot")))
         fig.update_layout(margin=dict(l=0, r=0, t=10, b=0), height=300)
         st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.warning("Los gráficos están temporalmente en pausa porque la conexión al servidor de precios fue rechazada.")
