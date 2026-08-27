@@ -34,7 +34,17 @@ def cargar_datos_5_anos():
     fng_txt = traductor.get(fng_txt_en, fng_txt_en)
     
     cg_url = "https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=1825&interval=daily"
-    cg_data = requests.get(cg_url).json()
+    cg_res = requests.get(cg_url)
+    
+    # NUEVA VALIDACIÓN: Si la API nos bloquea temporalmente (Código 429)
+    if cg_res.status_code == 429:
+        raise ValueError("Límite de consultas alcanzado. CoinGecko nos puso en pausa. Espera 3 minutos y recarga la página.")
+        
+    cg_data = cg_res.json()
+    
+    # NUEVA VALIDACIÓN: Si la API no devuelve los precios por otro error
+    if "prices" not in cg_data:
+        raise ValueError("La API de CoinGecko no devolvió los precios en este momento. Intenta más tarde.")
     
     fechas = [pd.to_datetime(p[0], unit='ms') for p in cg_data["prices"]]
     precios = [p[1] for p in cg_data["prices"]]
